@@ -2,96 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Adventure Game</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventure Map Game</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
-        body {
-            background: #111;
-            color: #eee;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            min-height: 100vh;
-        }
-        #game-container {
-            width: 370px;
-            margin: 40px auto;
-            background: rgba(25,25,30,0.97);
+        body { margin: 0; background: #12131a; color: #eee; font-family: Segoe UI, Arial, sans-serif; }
+        #main {
+            max-width: 420px;
+            margin: 30px auto;
+            background: #222430;
             border-radius: 18px;
-            box-shadow: 0 8px 36px #000a;
-            padding: 0;
+            box-shadow: 0 6px 32px #0009;
             overflow: hidden;
         }
-        #location-image {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            border-radius: 0 0 20px 20px;
-            background: #181818;
+        #canvas-wrap {
+            padding: 0;
+            background: #17171c;
+            text-align: center;
+        }
+        #mapCanvas {
+            background: #222b;
+            border-radius: 0 0 14px 14px;
+            margin: 0 auto;
             display: block;
+            width: 250px;
+            height: 250px;
+            box-shadow: 0 2px 18px #0004;
         }
-        #info-panel {
-            padding: 22px 22px 14px 22px;
-        }
+        #panel { padding: 20px 22px 15px 22px; }
         #scorebar {
-            display: flex;
-            justify-content: space-between;
-            font-size: 1.06em;
-            margin-bottom: 10px;
+            display: flex; justify-content: space-between;
+            font-size: 1.08em; margin-bottom: 10px;
         }
-        #location-name {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 2px;
-        }
-        #location-desc {
-            font-size: 1em;
-            margin-bottom: 14px;
-        }
+        #location-name { font-weight: bold; font-size: 1.2em; margin-bottom: 3px; }
+        #location-desc { font-size: 1em; margin-bottom: 13px; min-height: 38px; }
         #hintBox {
-            background: #3b4357;
-            color: #d0eaff;
-            padding: 9px 15px;
+            background: #394267;
+            color: #e0edff;
+            padding: 10px 15px;
             border-radius: 9px;
             margin-bottom: 10px;
             font-style: italic;
             display: none;
         }
-        #actions {
-            margin-bottom: 10px;
-        }
+        #actions { margin-bottom: 10px; }
         .btn {
-            display: inline-block;
             margin: 6px 8px 0 0;
             background: linear-gradient(90deg,#2956d8 60%,#59a7f6);
             color: #fff;
             border: none;
             border-radius: 12px;
             font-size: 1em;
-            padding: 10px 20px;
+            padding: 10px 19px;
             cursor: pointer;
-            box-shadow: 0 2px 8px #0003;
+            box-shadow: 0 2px 8px #0002;
             transition: background 0.15s;
         }
         .btn:disabled { background: #444; cursor: not-allowed; }
         #winBox {
             text-align: center;
-            padding: 40px 18px 30px 18px;
-            background: #2f6344;
+            padding: 34px 10px 30px 10px;
+            background: #28724e;
             color: #fffbe5;
             border-radius: 16px;
-            margin: 20px 0 10px 0;
+            margin: 16px 0 10px 0;
         }
         #winBox h2 { font-size: 2em; }
-        #winBox p { font-size: 1.15em; }
+        #winBox p { font-size: 1.1em; }
+        #arrows {
+            margin-top: 13px;
+            text-align: center;
+        }
+        .arrow-btn {
+            background: #2c335a;
+            border: none;
+            color: #d8eaff;
+            font-size: 1.6em;
+            margin: 4px;
+            border-radius: 50%;
+            width: 42px; height: 42px;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        .arrow-btn:disabled { opacity: 0.3; }
+        @media (max-width: 500px) {
+            #main { margin: 0; border-radius: 0; }
+        }
     </style>
 </head>
 <body>
-<div id="game-container">
-    <img id="location-image" src="" alt="Location" />
-    <div id="info-panel">
+<div id="main">
+    <div id="canvas-wrap">
+        <canvas id="mapCanvas" width="250" height="250"></canvas>
+    </div>
+    <div id="panel">
         <div id="scorebar">
             <span>Score: <span id="scoreVal">0</span></span>
             <span>Hints: <span id="hintsVal">3</span></span>
@@ -106,101 +109,145 @@
             <p>Your final score: <span id="finalScore"></span></p>
             <button class="btn" onclick="restartGame()">Restart Game</button>
         </div>
+        <div id="arrows">
+            <button class="arrow-btn" onclick="move('up')" id="btnUp" title="Move Up">▲</button>
+            <br>
+            <button class="arrow-btn" onclick="move('left')" id="btnLeft" title="Move Left">◀</button>
+            <button class="arrow-btn" onclick="move('down')" id="btnDown" title="Move Down">▼</button>
+            <button class="arrow-btn" onclick="move('right')" id="btnRight" title="Move Right">▶</button>
+        </div>
     </div>
 </div>
 <script>
-const locations = {
-    forest: {
-        name: "Enchanted Forest",
-        desc: "Tall, ancient trees stretch skyward. You sense a path to the east.",
-        image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=700&q=80",
-        actions: [
-            { label: "Go East", to: "cave", score: 5 },
-            { label: "Look Around", hint: "Footprints lead east." }
-        ]
-    },
-    cave: {
-        name: "Dark Cave",
-        desc: "Shadows dance on rough walls. The cave splits north and south.",
-        image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=700&q=80",
-        actions: [
-            { label: "Go North", to: "lake", score: 10 },
-            { label: "Go South", to: "swamp", score: 10 },
-            { label: "Return West", to: "forest", score: -2 }
-        ]
-    },
-    lake: {
-        name: "Crystal Lake",
-        desc: "The water gleams under moonlight. Something sparkles under a rock.",
-        image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=700&q=80",
-        actions: [
-            { label: "Search Rocks", hint: "You found a silver coin!", score: 8 },
-            { label: "Return South", to: "cave", score: -1 }
-        ]
-    },
-    swamp: {
-        name: "Foggy Swamp",
-        desc: "Mist swirls around gnarled roots. You hear a sound to the east.",
-        image: "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&w=700&q=80",
-        actions: [
-            { label: "Go East", to: "temple", score: 10 },
-            { label: "Return North", to: "cave", score: -1 }
-        ]
-    },
-    temple: {
-        name: "Ancient Temple",
-        desc: "Vines hang from old stones. The air tingles with magic.",
-        image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=700&q=80",
-        actions: [
-            { label: "Search for Treasure", win: true, score: 50 },
-            { label: "Return West", to: "swamp", score: -2 }
-        ]
-    }
-};
+//--- Adventure Game Map ---//
+const gridW = 5, gridH = 5;
 
-const hintsList = [
-    "Follow the paths less traveled.",
-    "Sometimes, searching gives you rewards.",
-    "Not every step increases your score.",
-    "The temple holds the ultimate prize.",
-    "Try to explore every location!"
+// Map grid locations with types
+// 0=Forest, 1=Cave, 2=Lake, 3=Swamp, 4=Temple (Win), X=Wall
+const gameMap = [
+    [0,  0,  1,  0,  0],
+    [0,  3,  1,  0,  0],
+    [0,  1,  2,  1,  4],
+    [0,  1,  3,  1,  0],
+    [0,  0,  1,  0,  0],
 ];
 
+const typeData = [
+    // Forest
+    {
+        name: "Enchanted Forest",
+        desc: "Towering trees. The path feels mysterious.",
+        image: "#385a36", // fallback color, not used in canvas
+        actions: [
+            { label: "Look Around", hint: "Maybe there's a path nearby." }
+        ]
+    },
+    // Cave
+    {
+        name: "Dark Cave",
+        desc: "Echoes in the dark. Stone splits tunnelways.",
+        image: "#222", // fallback color
+        actions: [
+            { label: "Search Stones", hint: "Hidden paths go north or south." }
+        ]
+    },
+    // Lake
+    {
+        name: "Crystal Lake",
+        desc: "Still water shimmers. Something glints near the shore.",
+        image: "#3c80e6",
+        actions: [
+            { label: "Search Shore", hint: "You found a silver coin!", score: 8 }
+        ]
+    },
+    // Swamp
+    {
+        name: "Foggy Swamp",
+        desc: "Mist covers twisted roots. It's hard to see.",
+        image: "#365342",
+        actions: [
+            { label: "Listen", hint: "East? There is a sound in the mist." }
+        ]
+    },
+    // Temple (Win)
+    {
+        name: "Ancient Temple",
+        desc: "Ruins covered in vines. The air tingles with magic.",
+        image: "#debb42",
+        actions: [
+            { label: "Search for Treasure", win: true, score: 50 }
+        ]
+    }
+];
+
+const cellImages = [
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=150&q=80", // Forest
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=150&q=80", // Cave
+    "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=150&q=80", // Lake
+    "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&w=150&q=80", // Swamp
+    "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=150&q=80"  // Temple
+];
+
+//-- Hints
+const hintsList = [
+    "Try to reach the edge of the map for something special.",
+    "The lake has something shiny for you.",
+    "Temple lies east, past the dangers.",
+    "Not every path leads to the treasure.",
+    "Explore everywhere to maximize your score!"
+];
+
+//-- Player state
 let state = {
-    location: 'forest',
+    x: 0, y: 2, // start in left-middle (forest)
     score: 0,
     hints: 3,
-    gameOver: false
+    gameOver: false,
+    foundLakeCoin: false
 };
+
+function locationType(x, y) {
+    if (x < 0 || y < 0 || x >= gridW || y >= gridH) return null;
+    return gameMap[y][x];
+}
 
 function render() {
     document.getElementById('hintBox').style.display = 'none';
     document.getElementById('winBox').style.display = state.gameOver ? 'block' : 'none';
 
-    // Show/hide panels
     document.getElementById('scoreVal').innerText = state.score;
     document.getElementById('hintsVal').innerText = state.hints;
 
-    // Location UI
-    const loc = locations[state.location];
-    document.getElementById('location-image').src = loc.image;
-    document.getElementById('location-name').innerText = loc.name;
-    document.getElementById('location-desc').innerText = loc.desc;
+    // Block movement off-map
+    document.getElementById('btnUp').disabled    = (state.y <= 0)        || locationType(state.x, state.y-1) === undefined;
+    document.getElementById('btnDown').disabled  = (state.y >= gridH-1)  || locationType(state.x, state.y+1) === undefined;
+    document.getElementById('btnLeft').disabled  = (state.x <= 0)        || locationType(state.x-1, state.y) === undefined;
+    document.getElementById('btnRight').disabled = (state.x >= gridW-1)  || locationType(state.x+1, state.y) === undefined;
 
-    // Winner stage
+    // Location UI
+    let locType = locationType(state.x, state.y);
+    let t = typeData[locType];
+    document.getElementById('location-name').innerText = t.name;
+    document.getElementById('location-desc').innerText = t.desc;
+
+    // Winner
     if (state.gameOver) {
         document.getElementById('finalScore').innerText = state.score;
         document.getElementById('actions').innerHTML = '';
         document.getElementById('location-name').innerText = '';
         document.getElementById('location-desc').innerText = '';
-        document.getElementById('location-image').src = "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=700&q=80";
+        drawMap(); // show avatar at temple
         return;
     }
 
     // Actions
     const actionsDiv = document.getElementById('actions');
     actionsDiv.innerHTML = '';
-    loc.actions.forEach((action, idx) => {
+
+    t.actions.forEach((action, idx) => {
+        // Special: Only allow finding coin ONCE
+        if (locType === 2 && action.score && state.foundLakeCoin) return;
+
         const btn = document.createElement('button');
         btn.className = 'btn';
         btn.innerText = action.label;
@@ -215,16 +262,49 @@ function render() {
     hintBtn.disabled = state.hints <= 0;
     hintBtn.onclick = showHint;
     actionsDiv.appendChild(hintBtn);
+
+    drawMap();
 }
 
+// Movement
+function move(dir) {
+    if (state.gameOver) return;
+    let nx = state.x, ny = state.y;
+    if (dir === 'up') ny--;
+    if (dir === 'down') ny++;
+    if (dir === 'left') nx--;
+    if (dir === 'right') nx++;
+    if (locationType(nx, ny) !== undefined) {
+        state.x = nx; state.y = ny;
+        // Award or penalize score for entering locations
+        if (locationType(nx, ny) === 4) { // Temple
+            // No score for entry; only for win action
+        } else if (locationType(nx, ny) === 2) { // Lake
+            state.score += 2;
+        } else {
+            state.score += 1;
+        }
+        render();
+    }
+}
+
+// Keyboard movement
+window.addEventListener("keydown", e => {
+    if (state.gameOver) return;
+    if (e.key === "ArrowUp") move('up');
+    if (e.key === "ArrowDown") move('down');
+    if (e.key === "ArrowLeft") move('left');
+    if (e.key === "ArrowRight") move('right');
+});
+
+// Actions
 function doAction(action) {
     if (action.hint) {
         showCustomHint(action.hint);
-        if (action.score) state.score += action.score;
-    }
-    if (action.to) {
-        state.location = action.to;
-        if (action.score) state.score += action.score;
+        if (action.score && locationType(state.x, state.y) === 2) {
+            state.score += action.score;
+            state.foundLakeCoin = true;
+        }
     }
     if (action.win) {
         state.score += action.score || 0;
@@ -248,17 +328,79 @@ function showCustomHint(hint) {
     document.getElementById('hintBox').style.display = 'block';
 }
 
+// Canvas drawing
+const canvas = document.getElementById("mapCanvas");
+const ctx = canvas.getContext("2d");
+const cellSize = canvas.width / gridW;
+
+// Preload images
+let images = [];
+for (let i = 0; i < cellImages.length; i++) {
+    let img = new Image();
+    img.src = cellImages[i];
+    images.push(img);
+}
+
+function drawMap() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw grid cells
+    for (let y = 0; y < gridH; y++) {
+        for (let x = 0; x < gridW; x++) {
+            let type = gameMap[y][x];
+            if (type !== undefined) {
+                ctx.drawImage(images[type], x*cellSize, y*cellSize, cellSize, cellSize);
+                // Border
+                ctx.strokeStyle = "#222";
+                ctx.lineWidth = 1.2;
+                ctx.strokeRect(x*cellSize, y*cellSize, cellSize, cellSize);
+            }
+        }
+    }
+    // Draw player
+    if (!state.gameOver || locationType(state.x, state.y) === 4) {
+        // Draw a circle avatar
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(state.x*cellSize+cellSize/2, state.y*cellSize+cellSize/2, cellSize/3, 0, 2*Math.PI);
+        ctx.closePath();
+        ctx.fillStyle = "#fffa77";
+        ctx.shadowColor = "#ff0";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        // Face
+        ctx.beginPath();
+        ctx.arc(state.x*cellSize+cellSize/2-7, state.y*cellSize+cellSize/2-3, 3, 0, 2*Math.PI);
+        ctx.arc(state.x*cellSize+cellSize/2+7, state.y*cellSize+cellSize/2-3, 3, 0, 2*Math.PI);
+        ctx.fillStyle = "#333";
+        ctx.shadowBlur = 0;
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// Reset/restart
 function restartGame() {
     state = {
-        location: 'forest',
+        x: 0, y: 2, // left-middle
         score: 0,
         hints: 3,
-        gameOver: false
+        gameOver: false,
+        foundLakeCoin: false
     };
     render();
 }
 
-window.onload = render;
+// On load, redraw when images ready
+let loadedImages = 0;
+images.forEach(img => {
+    img.onload = () => {
+        loadedImages++;
+        if (loadedImages === images.length) render();
+    }
+});
+// fallback render if cached images
+setTimeout(render, 300);
+
 </script>
 </body>
 </html>
