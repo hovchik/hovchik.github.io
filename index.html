@@ -1,96 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Catch the Coin</title>
-  <style>
-    body { margin: 0; background: #222; }
-    canvas { display: block; margin: auto; background: #333; border-radius: 16px; }
-    #telegram-score { color: white; text-align: center; margin-top: 10px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Mini Adventure Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #16181a; color: #f1f1f1; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        #game { max-width: 500px; margin: 40px auto; background: #23272b; border-radius: 20px; padding: 24px; box-shadow: 0 4px 32px #0007; }
+        #score { font-size: 1.2em; margin-bottom: 1em; }
+        #location { font-size: 1.2em; margin-bottom: 0.8em; }
+        #desc { margin-bottom: 1em; }
+        #actions { margin-bottom: 1em; }
+        .btn {
+            background: #3246a8;
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            padding: 10px 22px;
+            margin: 6px 8px 6px 0;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.15s;
+        }
+        .btn:disabled { background: #33374a; cursor: not-allowed; }
+        #hintBox { background: #2d2f37; border-radius: 12px; padding: 14px; margin-bottom: 1em; font-style: italic; color: #c8e7fa; display: none;}
+        #winBox { text-align: center; padding: 24px; background: #2b5029; border-radius: 16px; }
+    </style>
 </head>
 <body>
-<canvas id="game" width="320" height="480"></canvas>
-<div id="telegram-score"></div>
+<div id="game">
+    <div id="score">Score: <span id="scoreVal">0</span> | Hints left: <span id="hintsVal">3</span></div>
+    <div id="location"></div>
+    <div id="desc"></div>
+    <div id="hintBox"></div>
+    <div id="actions"></div>
+    <div id="winBox" style="display:none;">
+        <h2>🏆 You found the treasure!</h2>
+        <p>Congratulations, adventurer!</p>
+        <p>Your final score: <span id="finalScore"></span></p>
+        <button class="btn" onclick="restartGame()">Restart Game</button>
+    </div>
+</div>
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-
-let basket = { x: 140, y: 430, w: 40, h: 20 };
-let coin = { x: Math.random()*280, y: 0, r: 12, vy: 4 };
-let score = 0;
-let gameOver = false;
-
-function drawBasket() {
-    ctx.fillStyle = "#FFD700";
-    ctx.fillRect(basket.x, basket.y, basket.w, basket.h);
-}
-function drawCoin() {
-    ctx.beginPath();
-    ctx.arc(coin.x, coin.y, coin.r, 0, Math.PI*2);
-    ctx.fillStyle = "#fff";
-    ctx.fill();
-}
-function drawScore() {
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "#fff";
-    ctx.fillText(`Score: ${score}`, 10, 30);
-}
-
-function update() {
-    if (gameOver) return;
-    coin.y += coin.vy;
-    // If coin hits basket
-    if (
-        coin.y + coin.r > basket.y &&
-        coin.x > basket.x &&
-        coin.x < basket.x + basket.w
-    ) {
-        score++;
-        coin = { x: Math.random()*280, y: 0, r: 12, vy: 4 + score*0.2 };
+const locations = {
+    forest: {
+        name: "Mysterious Forest",
+        desc: "Tall trees surround you. There’s a faint path to the east.",
+        actions: [
+            { label: "Go East", to: "cave", score: 5 },
+            { label: "Look Around", hint: "You notice footprints leading east." }
+        ]
+    },
+    cave: {
+        name: "Dark Cave",
+        desc: "A chilly wind blows inside. The cave splits north and south.",
+        actions: [
+            { label: "Go North", to: "lake", score: 10 },
+            { label: "Go South", to: "swamp", score: 10 },
+            { label: "Return West", to: "forest", score: -2 }
+        ]
+    },
+    lake: {
+        name: "Crystal Lake",
+        desc: "Water sparkles in the moonlight. Something glitters under a rock.",
+        actions: [
+            { label: "Search the Rocks", hint: "You find a silver coin!", score: 8 },
+            { label: "Return South", to: "cave", score: -1 }
+        ]
+    },
+    swamp: {
+        name: "Foggy Swamp",
+        desc: "Mist rises from the ground. There’s a faint sound to the east.",
+        actions: [
+            { label: "Go East", to: "temple", score: 10 },
+            { label: "Return North", to: "cave", score: -1 }
+        ]
+    },
+    temple: {
+        name: "Ancient Temple",
+        desc: "Vines cover broken pillars. The air feels magical.",
+        actions: [
+            { label: "Search for Treasure", win: true, score: 50 },
+            { label: "Return West", to: "swamp", score: -2 }
+        ]
     }
-    // If missed
-    if (coin.y > canvas.height) {
-        gameOver = true;
-        document.getElementById('telegram-score').innerText = `Game Over! Your score: ${score}`;
-        if (window.TelegramGameProxy) {
-            window.TelegramGameProxy.postScore(score);
+};
+
+const hintsList = [
+    "Follow the paths less traveled.",
+    "Sometimes, searching your surroundings gives rewards.",
+    "Not every step forward increases your score.",
+    "The temple is rumored to hide great treasures.",
+    "Check every location for hidden items!"
+];
+
+let state = {
+    location: 'forest',
+    score: 0,
+    hints: 3,
+    gameOver: false
+};
+
+function render() {
+    document.getElementById('hintBox').style.display = 'none';
+    document.getElementById('winBox').style.display = state.gameOver ? 'block' : 'none';
+
+    if (state.gameOver) {
+        document.getElementById('finalScore').innerText = state.score;
+        document.getElementById('location').innerText = '';
+        document.getElementById('desc').innerText = '';
+        document.getElementById('actions').innerHTML = '';
+        document.getElementById('score').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('score').style.display = 'block';
+    document.getElementById('scoreVal').innerText = state.score;
+    document.getElementById('hintsVal').innerText = state.hints;
+
+    const loc = locations[state.location];
+    document.getElementById('location').innerText = 'Location: ' + loc.name;
+    document.getElementById('desc').innerText = loc.desc;
+
+    // Render actions
+    const actionsDiv = document.getElementById('actions');
+    actionsDiv.innerHTML = '';
+    loc.actions.forEach((action, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.innerText = action.label;
+        btn.onclick = () => doAction(action);
+        actionsDiv.appendChild(btn);
+    });
+
+    // Render hint button
+    const hintBtn = document.createElement('button');
+    hintBtn.className = 'btn';
+    hintBtn.innerText = 'Get a Hint';
+    hintBtn.disabled = state.hints <= 0;
+    hintBtn.onclick = showHint;
+    actionsDiv.appendChild(hintBtn);
+}
+
+function doAction(action) {
+    if (action.hint) {
+        showCustomHint(action.hint);
+        if (action.score) {
+            state.score += action.score;
         }
     }
-}
-
-function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    drawBasket();
-    drawCoin();
-    drawScore();
-}
-
-function gameLoop() {
-    update();
-    draw();
-    if (!gameOver) requestAnimationFrame(gameLoop);
-}
-gameLoop();
-
-document.addEventListener('mousemove', function(e) {
-    // For Telegram browser: use touch events
-    if (e.touches) {
-        let x = e.touches[0].clientX - canvas.getBoundingClientRect().left;
-        basket.x = Math.max(0, Math.min(x - basket.w/2, canvas.width - basket.w));
+    if (action.to) {
+        state.location = action.to;
+        if (action.score) {
+            state.score += action.score;
+        }
     }
-});
+    if (action.win) {
+        state.score += action.score || 0;
+        state.gameOver = true;
+    }
+    render();
+}
 
-canvas.addEventListener('mousemove', function(e) {
-    let x = e.offsetX;
-    basket.x = Math.max(0, Math.min(x - basket.w/2, canvas.width - basket.w));
-});
-canvas.addEventListener('touchmove', function(e) {
-    let x = e.touches[0].clientX - canvas.getBoundingClientRect().left;
-    basket.x = Math.max(0, Math.min(x - basket.w/2, canvas.width - basket.w));
-    e.preventDefault();
-}, { passive: false });
+function showHint() {
+    if (state.hints > 0) {
+        state.hints -= 1;
+        const rand = hintsList[Math.floor(Math.random() * hintsList.length)];
+        document.getElementById('hintBox').innerText = 'Hint: ' + rand;
+        document.getElementById('hintBox').style.display = 'block';
+        render();
+    }
+}
 
+function showCustomHint(hint) {
+    document.getElementById('hintBox').innerText = 'Hint: ' + hint;
+    document.getElementById('hintBox').style.display = 'block';
+}
+
+function restartGame() {
+    state = {
+        location: 'forest',
+        score: 0,
+        hints: 3,
+        gameOver: false
+    };
+    render();
+}
+
+window.onload = render;
 </script>
 </body>
 </html>
