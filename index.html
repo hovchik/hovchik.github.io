@@ -2,58 +2,127 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mini Adventure Game</title>
+    <title>Adventure Game</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { background: #16181a; color: #f1f1f1; font-family: 'Segoe UI', sans-serif; margin: 0; }
-        #game { max-width: 500px; margin: 40px auto; background: #23272b; border-radius: 20px; padding: 24px; box-shadow: 0 4px 32px #0007; }
-        #score { font-size: 1.2em; margin-bottom: 1em; }
-        #location { font-size: 1.2em; margin-bottom: 0.8em; }
-        #desc { margin-bottom: 1em; }
-        #actions { margin-bottom: 1em; }
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            background: #111;
+            color: #eee;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            min-height: 100vh;
+        }
+        #game-container {
+            width: 370px;
+            margin: 40px auto;
+            background: rgba(25,25,30,0.97);
+            border-radius: 18px;
+            box-shadow: 0 8px 36px #000a;
+            padding: 0;
+            overflow: hidden;
+        }
+        #location-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 0 0 20px 20px;
+            background: #181818;
+            display: block;
+        }
+        #info-panel {
+            padding: 22px 22px 14px 22px;
+        }
+        #scorebar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.06em;
+            margin-bottom: 10px;
+        }
+        #location-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        #location-desc {
+            font-size: 1em;
+            margin-bottom: 14px;
+        }
+        #hintBox {
+            background: #3b4357;
+            color: #d0eaff;
+            padding: 9px 15px;
+            border-radius: 9px;
+            margin-bottom: 10px;
+            font-style: italic;
+            display: none;
+        }
+        #actions {
+            margin-bottom: 10px;
+        }
         .btn {
-            background: #3246a8;
+            display: inline-block;
+            margin: 6px 8px 0 0;
+            background: linear-gradient(90deg,#2956d8 60%,#59a7f6);
+            color: #fff;
             border: none;
             border-radius: 12px;
-            color: #fff;
-            padding: 10px 22px;
-            margin: 6px 8px 6px 0;
-            cursor: pointer;
             font-size: 1em;
+            padding: 10px 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px #0003;
             transition: background 0.15s;
         }
-        .btn:disabled { background: #33374a; cursor: not-allowed; }
-        #hintBox { background: #2d2f37; border-radius: 12px; padding: 14px; margin-bottom: 1em; font-style: italic; color: #c8e7fa; display: none;}
-        #winBox { text-align: center; padding: 24px; background: #2b5029; border-radius: 16px; }
+        .btn:disabled { background: #444; cursor: not-allowed; }
+        #winBox {
+            text-align: center;
+            padding: 40px 18px 30px 18px;
+            background: #2f6344;
+            color: #fffbe5;
+            border-radius: 16px;
+            margin: 20px 0 10px 0;
+        }
+        #winBox h2 { font-size: 2em; }
+        #winBox p { font-size: 1.15em; }
     </style>
 </head>
 <body>
-<div id="game">
-    <div id="score">Score: <span id="scoreVal">0</span> | Hints left: <span id="hintsVal">3</span></div>
-    <div id="location"></div>
-    <div id="desc"></div>
-    <div id="hintBox"></div>
-    <div id="actions"></div>
-    <div id="winBox" style="display:none;">
-        <h2>🏆 You found the treasure!</h2>
-        <p>Congratulations, adventurer!</p>
-        <p>Your final score: <span id="finalScore"></span></p>
-        <button class="btn" onclick="restartGame()">Restart Game</button>
+<div id="game-container">
+    <img id="location-image" src="" alt="Location" />
+    <div id="info-panel">
+        <div id="scorebar">
+            <span>Score: <span id="scoreVal">0</span></span>
+            <span>Hints: <span id="hintsVal">3</span></span>
+        </div>
+        <div id="location-name"></div>
+        <div id="location-desc"></div>
+        <div id="hintBox"></div>
+        <div id="actions"></div>
+        <div id="winBox" style="display:none;">
+            <h2>🏆 You found the treasure!</h2>
+            <p>Congratulations, adventurer!</p>
+            <p>Your final score: <span id="finalScore"></span></p>
+            <button class="btn" onclick="restartGame()">Restart Game</button>
+        </div>
     </div>
 </div>
 <script>
 const locations = {
     forest: {
-        name: "Mysterious Forest",
-        desc: "Tall trees surround you. There’s a faint path to the east.",
+        name: "Enchanted Forest",
+        desc: "Tall, ancient trees stretch skyward. You sense a path to the east.",
+        image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=700&q=80",
         actions: [
             { label: "Go East", to: "cave", score: 5 },
-            { label: "Look Around", hint: "You notice footprints leading east." }
+            { label: "Look Around", hint: "Footprints lead east." }
         ]
     },
     cave: {
         name: "Dark Cave",
-        desc: "A chilly wind blows inside. The cave splits north and south.",
+        desc: "Shadows dance on rough walls. The cave splits north and south.",
+        image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=700&q=80",
         actions: [
             { label: "Go North", to: "lake", score: 10 },
             { label: "Go South", to: "swamp", score: 10 },
@@ -62,15 +131,17 @@ const locations = {
     },
     lake: {
         name: "Crystal Lake",
-        desc: "Water sparkles in the moonlight. Something glitters under a rock.",
+        desc: "The water gleams under moonlight. Something sparkles under a rock.",
+        image: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=700&q=80",
         actions: [
-            { label: "Search the Rocks", hint: "You find a silver coin!", score: 8 },
+            { label: "Search Rocks", hint: "You found a silver coin!", score: 8 },
             { label: "Return South", to: "cave", score: -1 }
         ]
     },
     swamp: {
         name: "Foggy Swamp",
-        desc: "Mist rises from the ground. There’s a faint sound to the east.",
+        desc: "Mist swirls around gnarled roots. You hear a sound to the east.",
+        image: "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&w=700&q=80",
         actions: [
             { label: "Go East", to: "temple", score: 10 },
             { label: "Return North", to: "cave", score: -1 }
@@ -78,7 +149,8 @@ const locations = {
     },
     temple: {
         name: "Ancient Temple",
-        desc: "Vines cover broken pillars. The air feels magical.",
+        desc: "Vines hang from old stones. The air tingles with magic.",
+        image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=700&q=80",
         actions: [
             { label: "Search for Treasure", win: true, score: 50 },
             { label: "Return West", to: "swamp", score: -2 }
@@ -88,10 +160,10 @@ const locations = {
 
 const hintsList = [
     "Follow the paths less traveled.",
-    "Sometimes, searching your surroundings gives rewards.",
-    "Not every step forward increases your score.",
-    "The temple is rumored to hide great treasures.",
-    "Check every location for hidden items!"
+    "Sometimes, searching gives you rewards.",
+    "Not every step increases your score.",
+    "The temple holds the ultimate prize.",
+    "Try to explore every location!"
 ];
 
 let state = {
@@ -105,24 +177,27 @@ function render() {
     document.getElementById('hintBox').style.display = 'none';
     document.getElementById('winBox').style.display = state.gameOver ? 'block' : 'none';
 
-    if (state.gameOver) {
-        document.getElementById('finalScore').innerText = state.score;
-        document.getElementById('location').innerText = '';
-        document.getElementById('desc').innerText = '';
-        document.getElementById('actions').innerHTML = '';
-        document.getElementById('score').style.display = 'none';
-        return;
-    }
-
-    document.getElementById('score').style.display = 'block';
+    // Show/hide panels
     document.getElementById('scoreVal').innerText = state.score;
     document.getElementById('hintsVal').innerText = state.hints;
 
+    // Location UI
     const loc = locations[state.location];
-    document.getElementById('location').innerText = 'Location: ' + loc.name;
-    document.getElementById('desc').innerText = loc.desc;
+    document.getElementById('location-image').src = loc.image;
+    document.getElementById('location-name').innerText = loc.name;
+    document.getElementById('location-desc').innerText = loc.desc;
 
-    // Render actions
+    // Winner stage
+    if (state.gameOver) {
+        document.getElementById('finalScore').innerText = state.score;
+        document.getElementById('actions').innerHTML = '';
+        document.getElementById('location-name').innerText = '';
+        document.getElementById('location-desc').innerText = '';
+        document.getElementById('location-image').src = "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=700&q=80";
+        return;
+    }
+
+    // Actions
     const actionsDiv = document.getElementById('actions');
     actionsDiv.innerHTML = '';
     loc.actions.forEach((action, idx) => {
@@ -133,7 +208,7 @@ function render() {
         actionsDiv.appendChild(btn);
     });
 
-    // Render hint button
+    // Hint button
     const hintBtn = document.createElement('button');
     hintBtn.className = 'btn';
     hintBtn.innerText = 'Get a Hint';
@@ -145,15 +220,11 @@ function render() {
 function doAction(action) {
     if (action.hint) {
         showCustomHint(action.hint);
-        if (action.score) {
-            state.score += action.score;
-        }
+        if (action.score) state.score += action.score;
     }
     if (action.to) {
         state.location = action.to;
-        if (action.score) {
-            state.score += action.score;
-        }
+        if (action.score) state.score += action.score;
     }
     if (action.win) {
         state.score += action.score || 0;
